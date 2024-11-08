@@ -1,12 +1,18 @@
 <?php
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+    // Conexão com o banco de dados
     require_once $_SERVER['DOCUMENT_ROOT'] . '/config/conexao.php';
     header('Content-Type: application/json');
     $con = connect_local_mysqli('gestao_ambiental');
 
+    if (mysqli_connect_errno()) {
+        die("Falha na conexão com o banco de dados: " . mysqli_connect_error());
+    }
+
     $carregarDados = $_POST['carregarDados'] ?? '';
 
+    // Carregar dados
     if ($carregarDados == 'sim') {
 
         $sql = "SELECT * FROM setores";
@@ -28,43 +34,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 echo json_encode(["dados" => $dados]);
             }
         } else {
-            echo json_encode(["error" => "Erro na execução da consulta."]);
+            echo json_encode(["error" => "Erro na execução da consulta: " . mysqli_error($con)]);
         }
         exit;
     }
 
+    // Adicionar ou atualizar dados
     if ($carregarDados == 'nao') {
-        $id = $_REQUEST['id'] ?? '';
-        $setor = $_REQUEST['setor'] ?? '';
-        $localizacao = $_REQUEST['localizacao'] ?? '';
-        if (!empty($id)) {
+        $id = $_POST['id'] ?? '';
+        $setor = $_POST['setor'] ?? '';
+        $setor = mysqli_real_escape_string($con, $setor);
 
+        if (!empty($id)) {
             $sql = "UPDATE setores SET setor='$setor' WHERE id = '$id'";
             $resultado = mysqli_query($con, $sql);
 
             if ($resultado) {
                 echo json_encode(["status" => "true", "message" => "Setor atualizado com sucesso."]);
             } else {
-                echo json_encode(["status" => "false", "message" => "Erro ao atualizar setor."]);
+                echo json_encode(["status" => "false", "message" => "Erro ao atualizar setor: " . mysqli_error($con)]);
             }
             exit;
         } else {
-
-            $sql = "INSERT INTO SETORES (setor) VALUES ('$setor')";
+            $sql = "INSERT INTO setores (setor) VALUES ('$setor')";
             $resultado = mysqli_query($con, $sql);
 
             if ($resultado) {
                 echo json_encode(["status" => "true", "message" => "Setor adicionado com sucesso."]);
             } else {
-                echo json_encode(["status" => "false", "message" => "Erro ao adicionar setor."]);
+                echo json_encode(["status" => "false", "message" => "Erro ao adicionar setor: " . mysqli_error($con)]);
             }
             exit;
         }
     }
 
-    if ($carregarDados == 'linha') {
 
-        $id = $_POST['id'];
+
+    // Carregar dados de uma linha específica
+    if ($carregarDados == 'linha') {
+        $id = $_POST['id'] ?? '';
+
+        if (empty($id)) {
+            echo json_encode(["error" => "ID não fornecido."]);
+            exit;
+        }
+
+        // Proteção contra SQL Injection
+        $id = mysqli_real_escape_string($con, $id);
 
         $sql = "SELECT * FROM setores WHERE id = '$id' ";
         $resultado = mysqli_query($con, $sql);
@@ -72,28 +88,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dados = [];
 
         if ($resultado) {
-
             $row = mysqli_fetch_assoc($resultado);
 
-            $dados[] = [
-                'id' => $row['id'],
-                'setor' => $row['setor']
-            ];
-
-
-            if (empty($dados)) {
-                echo json_encode(["error" => "Consulta não retornou dados."]);
-            } else {
+            if ($row) {
+                $dados[] = [
+                    'id' => $row['id'],
+                    'setor' => $row['setor']
+                ];
                 echo json_encode(["dados" => $dados]);
+            } else {
+                echo json_encode(["error" => "Consulta não retornou dados."]);
             }
         } else {
-            echo json_encode(["error" => "Erro na execução da consulta."]);
+            echo json_encode(["error" => "Erro na execução da consulta: " . mysqli_error($con)]);
         }
         exit;
     }
 
+    // Deletar um setor
     if ($carregarDados == 'delete') {
-        $id = $_POST['id'];
+        $id = $_POST['id'] ?? '';
+
+        if (empty($id)) {
+            echo json_encode(["error" => "ID não fornecido."]);
+            exit;
+        }
+
+        // Proteção contra SQL Injection
+        $id = mysqli_real_escape_string($con, $id);
 
         $sql = "DELETE FROM setores WHERE id = '$id' ";
         $resultado = mysqli_query($con, $sql);
@@ -101,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($resultado) {
             echo json_encode(["dados" => "Setor deletado com sucesso."]);
         } else {
-            echo json_encode(["error" => "Erro na execução da consulta."]);
+            echo json_encode(["error" => "Erro na execução da consulta: " . mysqli_error($con)]);
         }
         exit;
     }

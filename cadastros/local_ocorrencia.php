@@ -1,16 +1,32 @@
 <?php
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    if ($_POST['qual'] == 'local') {
+    // Ativa a exibição de erros para depuração
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
 
-        require_once $_SERVER['DOCUMENT_ROOT'] . '/config/conexao.php';
-        header('Content-Type: application/json');
-        $con = connect_local_mysqli('gestao_ambiental');
+    // Conexão com o banco de dados
+    require_once $_SERVER['DOCUMENT_ROOT'] . '/config/conexao.php';
+    header('Content-Type: application/json');
+    $con = connect_local_mysqli('gestao_ambiental');
+
+    if (mysqli_connect_errno()) {
+        die("Falha na conexão com o banco de dados: " . mysqli_connect_error());
+    }
+
+    // Função para proteger contra SQL Injection
+    function escapeInput($input, $con) {
+        return mysqli_real_escape_string($con, trim($input));
+    }
+
+    // Processamento para 'local'
+    if ($_POST['qual'] == 'local') {
 
         $carregarDados = $_POST['carregarDados'] ?? '';
 
+        // Carregar todos os dados de 'local'
         if ($carregarDados == 'sim') {
-
             $sql = "SELECT * FROM local";
             $resultado = mysqli_query($con, $sql);
 
@@ -30,95 +46,114 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     echo json_encode(["dados" => $dados]);
                 }
             } else {
-                echo json_encode(["error" => "Erro na execução da consulta."]);
+                echo json_encode(["error" => "Erro na execução da consulta: " . mysqli_error($con)]);
             }
             exit;
         }
 
+        // Atualizar ou inserir um novo 'local'
         if ($carregarDados == 'nao') {
             $id = $_REQUEST['id'] ?? '';
             $local = $_REQUEST['local'] ?? '';
 
-            if (!empty($id)) {
+            if (empty($local)) {
+                echo json_encode(["error" => "Local não informado."]);
+                exit;
+            }
 
-                $sql = "UPDATE local SET LOCAL='$local' WHERE id = '$id'";
+            // Protege contra SQL Injection
+            $id = escapeInput($id, $con);
+            $local = escapeInput($local, $con);
+
+            if (!empty($id)) {
+                $sql = "UPDATE local SET local = '$local' WHERE id = '$id'";
                 $resultado = mysqli_query($con, $sql);
 
                 if ($resultado) {
                     echo json_encode(["status" => "true", "message" => "Setor atualizado com sucesso."]);
                 } else {
-                    echo json_encode(["status" => "false", "message" => "Erro ao atualizar setor."]);
+                    echo json_encode(["status" => "false", "message" => "Erro ao atualizar setor: " . mysqli_error($con)]);
                 }
                 exit;
             } else {
-
-                $sql = "INSERT INTO LOCAL (local) VALUES ('$local')";
+                $sql = "INSERT INTO local (local) VALUES ('$local')";
                 $resultado = mysqli_query($con, $sql);
 
                 if ($resultado) {
                     echo json_encode(["status" => "true", "message" => "Setor adicionado com sucesso."]);
                 } else {
-                    echo json_encode(["status" => "false", "message" => "Erro ao adicionar setor."]);
+                    echo json_encode(["status" => "false", "message" => "Erro ao adicionar setor: " . mysqli_error($con)]);
                 }
                 exit;
             }
         }
 
+        // Carregar dados de uma linha específica
         if ($carregarDados == 'linha') {
+            $id = $_POST['id'] ?? '';
 
-            $id = $_POST['id'];
+            if (empty($id)) {
+                echo json_encode(["error" => "ID não fornecido."]);
+                exit;
+            }
 
-            $sql = "SELECT * FROM LOCAL WHERE id = '$id' ";
+            // Protege contra SQL Injection
+            $id = escapeInput($id, $con);
+
+            $sql = "SELECT * FROM local WHERE id = '$id' ";
             $resultado = mysqli_query($con, $sql);
 
             $dados = [];
 
             if ($resultado) {
-
                 $row = mysqli_fetch_assoc($resultado);
 
-                $dados[] = [
-                    'id' => $row['id'],
-                    'local' => $row['local']
-                ];
-
-
-                if (empty($dados)) {
-                    echo json_encode(["error" => "Consulta não retornou dados."]);
-                } else {
+                if ($row) {
+                    $dados[] = [
+                        'id' => $row['id'],
+                        'local' => $row['local']
+                    ];
                     echo json_encode(["dados" => $dados]);
+                } else {
+                    echo json_encode(["error" => "Consulta não retornou dados."]);
                 }
             } else {
-                echo json_encode(["error" => "Erro na execução da consulta."]);
+                echo json_encode(["error" => "Erro na execução da consulta: " . mysqli_error($con)]);
             }
             exit;
         }
 
+        // Deletar 'local'
         if ($carregarDados == 'delete') {
-            $id = $_POST['id'];
+            $id = $_POST['id'] ?? '';
 
-            $sql = "DELETE FROM LOCAL WHERE id = '$id' ";
+            if (empty($id)) {
+                echo json_encode(["error" => "ID não fornecido."]);
+                exit;
+            }
+
+            // Protege contra SQL Injection
+            $id = escapeInput($id, $con);
+
+            $sql = "DELETE FROM local WHERE id = '$id' ";
             $resultado = mysqli_query($con, $sql);
 
             if ($resultado) {
                 echo json_encode(["dados" => "Setor deletado com sucesso."]);
             } else {
-                echo json_encode(["error" => "Erro na execução da consulta."]);
+                echo json_encode(["error" => "Erro na execução da consulta: " . mysqli_error($con)]);
             }
             exit;
         }
     }
 
+    // Processamento para 'ocorrencia'
     if ($_POST['qual'] == 'ocorrencia') {
-
-        require_once $_SERVER['DOCUMENT_ROOT'] . '/config/conexao.php';
-        header('Content-Type: application/json');
-        $con = connect_local_mysqli('gestao_ambiental');
 
         $carregarDados = $_POST['carregarDados'] ?? '';
 
+        // Carregar todos os dados de 'ocorrencia'
         if ($carregarDados == 'sim') {
-
             $sql = "SELECT * FROM ocorrencia";
             $resultado = mysqli_query($con, $sql);
 
@@ -138,85 +173,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     echo json_encode(["dados" => $dados]);
                 }
             } else {
-                echo json_encode(["error" => "Erro na execução da consulta."]);
+                echo json_encode(["error" => "Erro na execução da consulta: " . mysqli_error($con)]);
             }
             exit;
         }
 
+        // Atualizar ou inserir um novo 'ocorrencia'
         if ($carregarDados == 'nao') {
             $id = $_REQUEST['id'] ?? '';
             $ocorrencia = $_REQUEST['ocorrencia'] ?? '';
 
-            if (!empty($id)) {
+            if (empty($ocorrencia)) {
+                echo json_encode(["error" => "Ocorrência não informada."]);
+                exit;
+            }
 
-                $sql = "UPDATE OCORRENCIA SET ocorrencia='$ocorrencia' WHERE id = '$id'";
+            // Protege contra SQL Injection
+            $id = escapeInput($id, $con);
+            $ocorrencia = escapeInput($ocorrencia, $con);
+
+            if (!empty($id)) {
+                $sql = "UPDATE ocorrencia SET ocorrencia = '$ocorrencia' WHERE id = '$id'";
                 $resultado = mysqli_query($con, $sql);
 
                 if ($resultado) {
-                    echo json_encode(["status" => "true", "message" => "Setor atualizado com sucesso."]);
+                    echo json_encode(["status" => "true", "message" => "Ocorrência atualizada com sucesso."]);
                 } else {
-                    echo json_encode(["status" => "false", "message" => "Erro ao atualizar setor."]);
+                    echo json_encode(["status" => "false", "message" => "Erro ao atualizar ocorrência: " . mysqli_error($con)]);
                 }
                 exit;
             } else {
-
-                $sql = "INSERT INTO OCORRENCIA (ocorrencia) VALUES ('$ocorrencia')";
+                $sql = "INSERT INTO ocorrencia (ocorrencia) VALUES ('$ocorrencia')";
                 $resultado = mysqli_query($con, $sql);
 
                 if ($resultado) {
-                    echo json_encode(["status" => "true", "message" => "Setor adicionado com sucesso."]);
+                    echo json_encode(["status" => "true", "message" => "Ocorrência adicionada com sucesso."]);
                 } else {
-                    echo json_encode(["status" => "false", "message" => "Erro ao adicionar setor."]);
+                    echo json_encode(["status" => "false", "message" => "Erro ao adicionar ocorrência: " . mysqli_error($con)]);
                 }
                 exit;
             }
         }
 
+        // Carregar dados de uma linha específica
         if ($carregarDados == 'linha') {
+            $id = $_POST['id'] ?? '';
 
-            $id = $_POST['id'];
+            if (empty($id)) {
+                echo json_encode(["error" => "ID não fornecido."]);
+                exit;
+            }
 
-            $sql = "SELECT * FROM OCORRENCIA WHERE id = '$id' ";
+            // Protege contra SQL Injection
+            $id = escapeInput($id, $con);
+
+            $sql = "SELECT * FROM ocorrencia WHERE id = '$id' ";
             $resultado = mysqli_query($con, $sql);
 
             $dados = [];
 
             if ($resultado) {
-
                 $row = mysqli_fetch_assoc($resultado);
 
-                $dados[] = [
-                    'id' => $row['id'],
-                    'ocorrencia' => $row['ocorrencia']
-                ];
-
-
-                if (empty($dados)) {
-                    echo json_encode(["error" => "Consulta não retornou dados."]);
-                } else {
+                if ($row) {
+                    $dados[] = [
+                        'id' => $row['id'],
+                        'ocorrencia' => $row['ocorrencia']
+                    ];
                     echo json_encode(["dados" => $dados]);
+                } else {
+                    echo json_encode(["error" => "Consulta não retornou dados."]);
                 }
             } else {
-                echo json_encode(["error" => "Erro na execução da consulta."]);
+                echo json_encode(["error" => "Erro na execução da consulta: " . mysqli_error($con)]);
             }
             exit;
         }
 
+        // Deletar 'ocorrencia'
         if ($carregarDados == 'delete') {
-            $id = $_POST['id'];
+            $id = $_POST['id'] ?? '';
 
-            $sql = "DELETE FROM OCORRENCIA WHERE id = '$id' ";
+            if (empty($id)) {
+                echo json_encode(["error" => "ID não fornecido."]);
+                exit;
+            }
+
+            // Protege contra SQL Injection
+            $id = escapeInput($id, $con);
+
+            $sql = "DELETE FROM ocorrencia WHERE id = '$id' ";
             $resultado = mysqli_query($con, $sql);
 
             if ($resultado) {
-                echo json_encode(["dados" => "Setor deletado com sucesso."]);
+                echo json_encode(["dados" => "Ocorrência deletada com sucesso."]);
             } else {
-                echo json_encode(["error" => "Erro na execução da consulta."]);
+                echo json_encode(["error" => "Erro na execução da consulta: " . mysqli_error($con)]);
             }
             exit;
         }
     }
 }
+
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config/autoload.php'; 
 require_once HOME_DIR . 'componentes/navbar.php';

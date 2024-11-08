@@ -1,12 +1,9 @@
 <?php
-// Inicia a sessão
 session_start();
-
 // Verifica se a sessão 'usuario' está definida
 if (!isset($_SESSION['usuario'])) {
     // Se não estiver logado, redireciona para a página de login
     if ($_SERVER['REQUEST_URI'] !== '/login/login.php') {
-        // Verifica se a página atual não é a página de login antes de redirecionar
         header("Location: /login/login.php");
         exit;  // Garante que o código não continue sendo executado após o redirecionamento
     }
@@ -29,7 +26,4 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/config/conexao.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config/includes.php';
 require_once HOME_DIR . 'includes/funcoes.php';
 
-// Definir o tipo de conteúdo da página
-header('Content-Type: text/html; charset=UTF-8');
 ini_set('default_charset', 'utf-8');
-?>

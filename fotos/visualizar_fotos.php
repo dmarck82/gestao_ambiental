@@ -1,3 +1,4 @@
+<?php require_once $_SERVER['DOCUMENT_ROOT'] . '/config/autoload.php'; ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -86,13 +87,7 @@
 </style>
 
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/config/autoload.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/config/global_constraints.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/config/autoload.php';
-require_once HOME_DIR . 'componentes/navbar.php';
 
-
-$con = connect_local_mysqli('gestao_ambiental');
 
 $datade = '';
 $dataate = '';
@@ -106,7 +101,7 @@ $lcastanheira = '';
 $lpaubrasil = '';
 $totalRegistros = '';
 
-$url_base = "http://gestaoambiental.com.br/fotos/registrar_fotos.php?foto=";
+$url_base = "http://gestambi.com.br/fotos/registrar_fotos.php?foto=";
 
 $total = '';
 
@@ -122,6 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lcastanheira = $_REQUEST['castanheira'] ?? '';
     $lpaubrasil = $_REQUEST['paubrasil'] ?? '';
 }
+require_once $_SERVER['DOCUMENT_ROOT'] . '/config/global_constraints.php';
+require_once HOME_DIR . 'componentes/navbar.php';
 
 ?>
 
@@ -157,6 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <select class="form-select ml-2" id="setor" name="setor" data-placeholder="Selecione um setor...">
                                 <option value="" disabled <?= empty($setor) ? 'selected' : '' ?>>Selecione um setor...</option>
                                 <?php
+                                $con = connect_local_mysqli('gestao_ambiental');
                                 $sql = "SELECT * FROM setores ORDER BY 2 ASC";
                                 $resultado = mysqli_query($con, $sql);
                                 while ($row = mysqli_fetch_assoc($resultado)) {
@@ -287,124 +285,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="row justify-content-center align-items-center">
             <div class="col-md-12">
                 <?php
-                if (($datade && $dataate) || $setor || $subsecao || $local || $ocorrencia || $conforme || $limbauba || $lcastanheira || $lpaubrasil) {
+    if (($datade && $dataate) || $setor || $subsecao || $local || $ocorrencia || $conforme || $limbauba || $lcastanheira || $lpaubrasil) {
 
-                    $filtroData = '';
-                    $filtroSetor = '';
-                    $filtroSubsecao = '';
-                    $filtroLocal = '';
-                    $filtroOcorrencia = '';
-                    $filtroConforme = '';
-                    $filtroImbauba = '';
-                    $filtroCastanheira = '';
-                    $filtroPauBrasil = '';
+        // Initialize filter variables
+        $filtroData = $filtroSetor = $filtroSubsecao = $filtroLocal = $filtroOcorrencia = $filtroConforme = $filtroImbauba = $filtroCastanheira = $filtroPauBrasil = '';
 
-                    if ($datade && $dataate) {
-                        $filtroData = " AND data BETWEEN '$datade' AND '$dataate'";
-                    }
+        // Apply filters if values are set
+        if ($datade && $dataate) {
+            $filtroData = " AND data BETWEEN '$datade' AND '$dataate'";
+        }
+        if ($setor) {
+            $filtroSetor = " AND id_setor = '$setor'";
+        }
+        if ($subsecao) {
+            $filtroSubsecao = " AND id_subsecao = '$subsecao'";
+        }
+        if ($local) {
+            $filtroLocal = " AND id_local = '$local'";
+        }
+        if ($ocorrencia) {
+            $filtroOcorrencia = " AND id_ocorrencia = '$ocorrencia'";
+        }
+        if ($conforme) {
+            $filtroConforme = " AND conforme = '$conforme'";
+        }
+        if ($limbauba) {
+            $filtroImbauba = " AND limbauba = '$limbauba'";
+        }
+        if ($lcastanheira) {
+            $filtroCastanheira = " AND lcastanheira = '$lcastanheira'";
+        }
+        if ($lpaubrasil) {
+            $filtroPauBrasil = " AND lpaubrasil = '$lpaubrasil'";
+        }
 
-                    if ($setor) {
-                        $filtroSetor = " AND id_setor = '$setor' ";
-                    }
+        // Construct the query with the filters
+        $sql = "SELECT nome_arquivo, setor, subsecao, local, ocorrencia, data, conforme, 
+                lista_castanheira.item as item_cast, lista_imbauba.item as item_imb, 
+                lista_pau_brasil.item as item_pau, observacao
+                FROM fotos
+                LEFT JOIN setores on id_setor = setores.id
+                LEFT JOIN subsecoes on id_subsecao = subsecoes.id
+                LEFT JOIN local on id_local = local.id
+                LEFT JOIN ocorrencia on id_ocorrencia = ocorrencia.id
+                LEFT JOIN lista_castanheira on lcastanheira = lista_castanheira.id
+                LEFT JOIN lista_imbauba on limbauba = lista_imbauba.id
+                LEFT JOIN lista_pau_brasil on lpaubrasil = lista_pau_brasil.id
+                WHERE 1=1"
+                . $filtroData
+                . $filtroSetor
+                . $filtroSubsecao
+                . $filtroLocal
+                . $filtroOcorrencia
+                . $filtroConforme
+                . $filtroImbauba
+                . $filtroCastanheira
+                . $filtroPauBrasil;
 
-                    if ($subsecao) {
-                        $filtroSubsecao = " AND id_subsecao = '$subsecao' ";
-                    }
+        // Execute the query and handle any errors
+        $resultado = mysqli_query($con, $sql);
+        if (!$resultado) {
+            $e = mysqli_error($con);
+            echo "Erro ao executar a consulta: " . htmlspecialchars($e);
+        }
 
-                    if ($local) {
-                        $filtroLocal = " AND id_local = '$local' ";
-                    }
+        // Count the total number of records
+        $sqlT = "SELECT COUNT(1) AS TOTAL FROM fotos WHERE 1=1"
+                . $filtroData
+                . $filtroSetor
+                . $filtroSubsecao
+                . $filtroLocal
+                . $filtroOcorrencia
+                . $filtroConforme
+                . $filtroImbauba
+                . $filtroCastanheira
+                . $filtroPauBrasil;
+        $resultadoT = mysqli_query($con, $sqlT);
+        if (!$resultadoT) {
+            $e = mysqli_error($con);
+            echo "Erro ao executar a consulta de total: " . htmlspecialchars($e);
+        } else {
+            $total = mysqli_fetch_assoc($resultadoT);
+            $totalRegistros = isset($total['TOTAL']) ? $total['TOTAL'] : 0;
+        }
 
-                    if ($ocorrencia) {
-                        $filtroOcorrencia = " AND id_ocorrencia = '$ocorrencia' ";
-                    }
-
-                    if ($conforme) {
-                        $filtroConforme = " AND conforme = '$conforme' ";
-                    }
-
-                    if ($limbauba) {
-                        $filtroImbauba = " AND limbauba = '$limbauba' ";
-                    }
-
-                    if ($lcastanheira) {
-                        $filtroCastanheira = " AND lcastanheira = '$lcastanheira' ";
-                    }
-
-                    if ($lpaubrasil) {
-                        $filtroPauBrasil = " AND lpaubrasil = '$lpaubrasil' ";
-                    }
-
-                    $sql = "SELECT nome_arquivo, 
-                                setor, 
-                                subsecao, 
-                                local, 
-                                ocorrencia,
-                                data, 
-                                conforme,
-                                lista_castanheira.item as item_cast,
-                                lista_imbauba.item as item_imb,
-                                lista_pau_brasil.item as item_pau,
-                                observacao
-                            FROM fotos
-                            LEFT JOIN setores on id_setor = setores.id
-                            LEFT JOIN subsecoes on id_subsecao = subsecoes.id
-                            LEFT JOIN local on id_local = local.id
-                            LEFT JOIN ocorrencia on id_ocorrencia = ocorrencia.id
-                            LEFT JOIN lista_castanheira on lcastanheira = lista_castanheira.id
-                            LEFT JOIN lista_imbauba on limbauba = lista_imbauba.id
-                            LEFT JOIN lista_pau_brasil on lpaubrasil = lista_pau_brasil.id
-                            WHERE 1=1"
-                        . $filtroData
-                        . $filtroSetor
-                        . $filtroSubsecao
-                        . $filtroLocal
-                        . $filtroOcorrencia
-                        . $filtroConforme
-                        . $filtroImbauba
-                        . $filtroCastanheira
-                        . $filtroPauBrasil;
-
-                    $resultado = mysqli_query($con, $sql);
-
-                    if (!$resultado) {
-                        $e = mysqli_error($con);
-                        echo "Erro ao executar a consulta de total: " . $e;
-                    }
-
-                    $sqlT = "SELECT COUNT(1) AS TOTAL FROM FOTOS WHERE 1=1"
-                        . $filtroData
-                        . $filtroSetor
-                        . $filtroSubsecao
-                        . $filtroLocal
-                        . $filtroOcorrencia
-                        . $filtroConforme
-                        . $filtroImbauba
-                        . $filtroCastanheira
-                        . $filtroPauBrasil;
-                    $resultadoT = mysqli_query($con, $sqlT);
-
-                    if (!$resultadoT) {
-                        $e = mysqli_error($con);
-                        echo "Erro ao executar a consulta de total: " . $e;
-                    } else {
-                        $total = mysqli_fetch_assoc($resultadoT);
-                        if ($total && isset($total['TOTAL'])) {
-                            $totalRegistros = $total['TOTAL'];
-                        } else {
-                            $totalRegistros = 0;
-                        }
-                    }
-
-                    echo '<table class="registros" style="width: 100%;" role="grid">
-                            <tbody>
-                                <tr role="row">
-                                    <td role="gridcell">
-                                        <span class="titulo"><b>' . $totalRegistros . ' Registros encontrados</b></span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>';
+        // Output the total number of records
+        echo '<table class="registros" style="width: 100%;" role="grid">
+                <tbody>
+                    <tr role="row">
+                        <td role="gridcell">
+                            <span class="titulo"><b>' . $totalRegistros . ' Registros encontrados</b></span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>';
 
                     $imagens = [];
                     $legendas = [];

@@ -174,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 if (isset($_GET['foto'])) {
-    define('FOTOS_DIR', 'C:/xampp/htdocs/gestao_ambiental/armazenamento/');
+    define('FOTOS_DIR', $_SERVER['DOCUMENT_ROOT'] . '/armazenamento/');
     $foto = basename($_GET['foto']);
     $caminhoCompleto = FOTOS_DIR . $foto;
 
@@ -608,7 +608,7 @@ require_once HOME_DIR . 'componentes/navbar.php';
                 const nomeArquivo = $(this).data('foto');
 
                 // Monta a URL para o PHP que exibirá a imagem
-                const caminhoFoto = 'http://gestaoambiental.com.br/fotos/registrar_fotos.php?foto=' + encodeURIComponent(nomeArquivo);
+		const caminhoFoto = 'http://gestambi.com.br/armazenamento/' + encodeURIComponent(nomeArquivo);
 
                 // Define o src da imagem na modal e exibe a modal
                 $('#fotoModalImg').attr('src', caminhoFoto);

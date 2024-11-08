@@ -1,4 +1,66 @@
-<!DOCTYPE html>
+<?php
+session_start();
+session_regenerate_id(true);
+function login($login, $senha)
+{
+    global $con, $notfy;
+    
+    // Ajuste para verificar se a consulta foi preparada com sucesso
+    $sql = "SELECT * FROM usuarios WHERE usuario=? ";
+    $stmt = mysqli_prepare($con, $sql);
+
+    if ($stmt === false) {
+        $notfy = 'var notyf = new Notyf({delay: 5000});'
+            . 'notyf.alert("Erro na preparação da consulta!");';
+        return;
+    }
+
+    // Bind dos parâmetros
+    mysqli_stmt_bind_param($stmt, 's', $login);
+
+    // Executa a consulta
+    mysqli_stmt_execute($stmt);
+
+    // Obtém o resultado
+    $result = mysqli_stmt_get_result($stmt);
+
+    if (mysqli_num_rows($result) != 0) {
+        $resp = mysqli_fetch_assoc($result);
+
+        if (password_verify($senha, $resp['senha'])) {
+            $_SESSION['nome'] = mb_convert_case($resp['usuario'], MB_CASE_TITLE);
+            $_SESSION['email'] = $resp['email'];
+            $_SESSION['usuario'] = $resp['usuario'];
+            $_SESSION['admin'] = $resp['admin'];
+            $_SESSION['timeout'] = strtotime('+2 hours');
+            
+            
+            setcookie("sess", base64_encode(serialize($_SESSION)), 0, '/', ".gestambi.com.br", false, true);
+            header("Location: http://gestambi.com.br/fotos/visualizar_fotos.php");
+            exit;
+        } else {
+            $notfy = 'var notyf = new Notyf({delay: 5000});'
+                . 'notyf.alert("Login ou senha incorreta, favor tentar novamente!");';
+        }
+    } else {
+        $notfy = 'var notyf = new Notyf({delay: 5000});'
+            . 'notyf.alert("Login ou senha incorreta, favor tentar novamente!");';
+    }
+
+    mysqli_close($con);
+}
+
+require_once $_SERVER['DOCUMENT_ROOT'] . '/config/autoload.php';
+    $con = connect_local_mysqli("gestao_ambiental");
+
+    $notfy = "";
+
+    if (isset($_POST['login_submit'])) {
+        $login = htmlspecialchars(mb_convert_case($_POST['login'] ?? "", MB_CASE_UPPER));
+        $senha = $_POST['senha'] ?? "";
+        login($login, $senha);
+    }
+?>
 <html lang="pt-br">
 
 <head>
@@ -10,20 +72,6 @@
     <meta name="author" content="Sistema de Gestão Ambiental - Desenvolvido por Douglas Marcondes">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-
-    <?php
-    require_once $_SERVER['DOCUMENT_ROOT'] . '/config/autoload.php';
-    $con = connect_local_mysqli("gestao_ambiental");
-
-    $notfy = "";
-
-    if (isset($_POST['login_submit'])) {
-        $login = htmlspecialchars(mb_convert_case($_POST['login'] ?? "", MB_CASE_UPPER));
-        $senha = $_POST['senha'] ?? "";
-        login($login, $senha);
-    }
-    ?>
-
     <title>Sistema de Gestão Ambiental</title>
     <link rel="icon" href="/includes/logo.ico">
 </head>
@@ -115,59 +163,3 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
 </html>
-
-<?php
-function login($login, $senha)
-{
-    global $con, $notfy;
-
-    session_start();
-    session_regenerate_id(true);
-
-    // Ajuste para verificar se a consulta foi preparada com sucesso
-    $sql = "SELECT * FROM usuarios WHERE usuario=? ";
-    $stmt = mysqli_prepare($con, $sql);
-
-    // Verificar se a preparação foi bem-sucedida
-    if ($stmt === false) {
-        $notfy = 'var notyf = new Notyf({delay: 5000});'
-            . 'notyf.alert("Erro na preparação da consulta!");';
-        return;
-    }
-
-    // Bind dos parâmetros
-    mysqli_stmt_bind_param($stmt, 's', $login);
-
-    // Executa a consulta
-    mysqli_stmt_execute($stmt);
-
-    // Obtém o resultado
-    $result = mysqli_stmt_get_result($stmt);
-
-    if (mysqli_num_rows($result) != 0) {
-        $resp = mysqli_fetch_assoc($result);
-
-        // Verificar se a senha informada bate com o hash armazenado
-        if (password_verify($senha, $resp['senha'])) {
-            $_SESSION['nome'] = mb_convert_case($resp['usuario'], MB_CASE_TITLE);
-            $_SESSION['email'] = $resp['email'];
-            $_SESSION['usuario'] = $resp['usuario'];
-            $_SESSION['admin'] = $resp['admin'];
-            $_SESSION['timeout'] = strtotime('+2 hours');
-
-            setcookie("sess", base64_encode(serialize($_SESSION)), 0, '/', ".gestaoambiental.com.br", false, true);
-            header("Location: http://gestaoambiental.com.br/fotos/visualizar_fotos.php");
-            exit;
-        } else {
-            $notfy = 'var notyf = new Notyf({delay: 5000});'
-                . 'notyf.alert("Login ou senha incorreta, favor tentar novamente!");';
-        }
-    } else {
-        $notfy = 'var notyf = new Notyf({delay: 5000});'
-            . 'notyf.alert("Login ou senha incorreta, favor tentar novamente!");';
-    }
-
-    // Fechar a conexão
-    mysqli_close($con);
-}
-?>
