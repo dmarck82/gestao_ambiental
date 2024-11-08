@@ -135,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <div class="row justify-content-center align-items-center">
                 <div class="col-md-12 mb-2 text-center">
-                    <h1 class="titulo">Relatório</h1>
+                    <h1 class="titulo">Relatórioooo</h1>
                 </div>
             </div>
         </div>
